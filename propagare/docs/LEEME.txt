@@ -1,23 +1,31 @@
-  ![Propagare](https://03c8.net/images/propagare.png "Propagare")
+===========================================================================
+  ____                                              _       
+ |  _ \ Si no 'contesta'...(es)__ _  __ _ _ __   __| | __ _ 
+ | |_) | '__/ _ \| '_ \ / _` |/ _` |/ _` | '_ \ / _` |/ _` |
+ |  __/| | | (_) | |_) | (_| | (_| | (_| | | | | (_| | (_| |
+ |_|   |_|  \___/| .__/ \__,_|\__, |\__,_|_| |_|\__,_|\__,_|
+                 |_|          |___/                (IA)v:0.1
+
+===========================================================================
 
 ----------
 
- + Web:  https://propaganda.is
+ + Web:  https://github.com/epsylon/propagare || https://propaganda.is
 
- + Código:  https://github.com/epsylon/propagare
-
-----------
+===============
+  Projecto:
+===============
 
   Propagare  - es una herramienta de extracción, organización y análisis semántico de noticias.
 
-----------
-
-#### Instalando:
+===============
+  Instalación:
+===============
 
   Propagare es multiplataforma. Requiere Python (>2.7.9) y las siguientes librerías:
 
        python-html2text - Python module for converting HTML to Markdown text
-
+       
   En sistemas basados en Debian (ej: Ubuntu), puedes instalarla mediante: 
 
        sudo apt-get install python-html2text
@@ -30,21 +38,15 @@
 
        pip install html2text
 
-####  Fuentes de las librerías:
+  Fuente de las librerías:
 
-   * Python: https://www.python.org/downloads/
-   * Pypi-html2text: https://pypi.org/project/html2text/
+       * Python: https://www.python.org/downloads/
+       * Pypi-html2text: https://pypi.org/project/html2text/
 
-----------
-
-####  Licencia:
-
-  Propagare es distribuída con la licencia GPLv3. Puede revisarla en: [LICENSE](./docs/LICENSE).
-
-----------
-
-####  Opciones
-
+====================
+  Opciones:
+====================
+   
   --version      muestra la versión del programa
   -h, --help     muestra la ayuda
 
@@ -63,6 +65,3 @@
   -t             busca el término en el almacén
   --ts=TSOURCE   busca el término en una fuente determinada
 
-----------
-
-  ![Propagare](https://03c8.net/images/propagare2.png "Propagare")
