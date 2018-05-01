@@ -112,7 +112,7 @@ class Propagare(object):
         art_stored = 0
         for root, dirs, files in os.walk('data/'):
             art_stored += len(files) 
-        return art_stored/2 # (txt+json)/2
+        return (art_stored-1)/2 # ((txt+json)-last_log)/2
 
     def count_art_stored(self, n): # by source
         art_stored = 0
