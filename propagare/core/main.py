@@ -44,6 +44,7 @@ class Propagare(object):
         self.ctx.verify_mode = ssl.CERT_NONE
         self.jdata = [] # json stream container (a list)
         self.verbs = [] # a list to store semantics (verbs)
+        self.total_verbs = 0
 
     def set_options(self, options):
         self.options = options
@@ -153,7 +154,6 @@ class Propagare(object):
         return art_url_found
 
     def is_a_verb(self, w):
-        self.total_verbs = 0
         if w.endswith("ar") or w.endswith("er") or w.endswith("ir"): # (spanish: inifitive verb)
              self.total_verbs = self.total_verbs + 1
              self.verbs.append(w) # add verb to list 
