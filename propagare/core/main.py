@@ -43,6 +43,7 @@ class Propagare(object):
         self.ctx.check_hostname = False
         self.ctx.verify_mode = ssl.CERT_NONE
         self.jdata = [] # json stream container (a list)
+        self.verbs = [] # a list to store semantics (verbs)
 
     def set_options(self, options):
         self.options = options
@@ -152,7 +153,6 @@ class Propagare(object):
         return art_url_found
 
     def is_a_verb(self, w):
-        self.verbs = [] # a list to store semantics (verbs)
         self.total_verbs = 0
         if w.endswith("ar") or w.endswith("er") or w.endswith("ir"): # (spanish: inifitive verb)
              self.total_verbs = self.total_verbs + 1
@@ -395,7 +395,7 @@ class Propagare(object):
             if self.options.checkverbs: 
                 verb_flag = False
                 num = 0
-                print "[Info] Analizando (requiere tiempo!) en busca de: 'verbos infinitos'...\n"
+                print "[Info] Analizando (requiere tiempo!) en busca de: 'verbos infinitivos'...\n"
                 for verb in self.verbs:
                     num = num + 1
                     verb_flag = self.check_verb(verb) # re-check previous list of verbs (online!)

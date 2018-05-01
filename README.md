@@ -1,4 +1,4 @@
-  ![Propagare](https://03c8.net/images/propagare.png "Propagare")
+  ![Propagare](https://03c8.net/images/propagare2.png "Propagare")
 
 ----------
 
@@ -45,24 +45,26 @@
 
 ####  Opciones
 
-  --version      muestra la versión del programa
-  -h, --help     muestra la ayuda
+       --version      muestra la versión del programa
+       -h, --help     muestra la ayuda
 
-  --update       actualiza la herramienta a su última versión
+       --update       actualiza la herramienta a su última versión
 
-  --list         lista las fuentes de noticias soportadas
+       --list         lista las fuentes de noticias soportadas
 
-  -e             extrae noticias de todas las fuentes
-  --es=ESOURCE   especifíca una fuente de donde extraer noticias
-  --force-no     utilízalo para almacenar datos (Big Data)
+       -e             extrae noticias de todas las fuentes
+       --es=ESOURCE   especifíca una fuente de donde extraer noticias
+       --force-no     utilízalo para almacenar datos (Big Data)
 
-  -s             muestra algunas estadísticas interesantes
-  --ss=SSOURCE   especifíca una fuente de donde extraer estadísticas
-  --check-verbs  chequea si una palabra es un verbo (Experimental)
+       -s             muestra algunas estadísticas interesantes
+       --ss=SSOURCE   especifíca una fuente de donde extraer estadísticas
+       --check-verbs  chequea si una palabra es un verbo (Experimental)
 
-  -t             busca el término en el almacén
-  --ts=TSOURCE   busca el término en una fuente determinada
+       -t             busca el término en el almacén
+       --ts=TSOURCE   busca el término en una fuente determinada
 
 ----------
 
-  ![Propagare](https://03c8.net/images/propagare2.png "Propagare")
+  ![Propagare](https://03c8.net/images/propagare.png "Propagare")
+
+  ![Propagare](https://03c8.net/images/propagare3.png "Propagare")
