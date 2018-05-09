@@ -28,7 +28,7 @@ DEBUG = False
 
 class Propagare(object):
     def __init__(self):
-        self.supported_media = ["elpais.com"] # media sources modules currently implemented
+        self.supported_media = ["elpais.com", "eldiario.es"] # media sources modules currently implemented
         self.check_verb_online = "https://www.esfacil.eu/es/verbos/conjugacion.html?infinitive=" # for check spanish verbs online
         self.sources = [] # used for news media sources
         self.agents_file = 'core/txt/user-agents.txt' # set source path to retrieve user-agents
@@ -45,6 +45,7 @@ class Propagare(object):
         self.jdata = [] # json stream container (a list)
         self.verbs = [] # a list to store semantics (verbs)
         self.total_verbs = 0
+        self.total_num = 0
 
     def set_options(self, options):
         self.options = options
@@ -95,7 +96,10 @@ class Propagare(object):
                 traceback.print_exc()
 
     def generate_json(self, n, category, date, tag, ID):
-        self.json_report = open('data/'+n+"/"+category+"/"+date+"/"+tag+"/"+ID+"/"+ID+".json", "w") 
+        if "elpais.com" in n:
+            self.json_report = open('data/'+n+"/"+category+"/"+date+"/"+tag+"/"+ID+"/"+ID+".json", "w") 
+        if "eldiario.es" in n:
+            self.json_report = open('data/'+n+"/"+category+"/"+ID+"/"+ID+".json", "w")
 
     def format_content(self, body_complete):
         html_parser = html2text.HTML2Text()
@@ -122,18 +126,37 @@ class Propagare(object):
             art_stored += len(files)
         return art_stored/2 # (txt+json)/2
 
+    def count_sources_list(self):
+        media_stored = 0
+        for root, dirs, files in os.walk("data/"):
+            for d in dirs:
+                if d in self.supported_media:
+                    media_stored = media_stored + 1
+        return media_stored
+
+    def check_art_exists(self, a, n):
+        sep = ".json"
+        for root, dirs, files in os.walk('data/' + n):
+            for f in files:
+                if f.endswith(".json"):
+                    f = str(f.split(sep, 1)[0])
+                    if str(f) in str(a):
+                        check_pass = False
+                        return check_pass
+                    else:
+                        check_pass = True
+
     def create_sources_list(self):
         for root, dirs, files in os.walk("sources/", topdown=False):
             for name in files:
-                if not self.options.stats:
-                    print "- Encontrado:", name, "\n"
-                if name not in self.sources:
+                if name not in self.sources and name in self.supported_media:
                     self.sources.append(name) # add name to sources list     
 
     def check_art_repetitions(self, n, art_url_found):
         sep = "/"
         sep2 = ".html"
         sep3 = "."
+        sep4 = "_"
         filenames = []
         for root, dirs, files in os.walk('data/' + n):
             for f in files:
@@ -143,14 +166,18 @@ class Propagare(object):
                     filenames.append(filename)
         if filenames:
             for f in filenames:
-                f = str(f.split(sep3, 1)[0])
                 for a in art_url_found:
-                    ID = str(a.split(sep, 5)[5]) 
-                    ID = str(ID.split(sep2, 1)[0])
-                    if sep in ID:
-                        ID = str(ID.split(sep, 2)[2])
-                    if str(ID) in str(f): # art stored, discard it
-                        art_url_found.remove(a)
+                    if "eldiario.es" in n:
+                        if str(f) in str(a):
+                            art_url_found.remove(a)
+                    if "elpais.com" in n:
+                        f = str(f.split(sep3, 1)[0])
+                        ID = str(a.split(sep, 5)[5]) 
+                        ID = str(ID.split(sep2, 1)[0])
+                        if sep in ID:
+                            ID = str(ID.split(sep, 2)[2])
+                        if str(ID) in str(f): # art stored, discard it
+                            art_url_found.remove(a)
         return art_url_found
 
     def is_a_verb(self, w):
@@ -203,7 +230,8 @@ class Propagare(object):
                 print "" # zen out
                 sys.exit(2)
         else:
-            source = 'data/'
+            if not self.options.ssource:
+                source = 'data/'
         for root, dirs, files in os.walk(source): # generate stream for analisis             
             for fl in files:
                 if fl.endswith(".json"): # extract content from json archives
@@ -215,6 +243,10 @@ class Propagare(object):
                     except:
                         pass
                     kf.close()
+        if not self.jdata:
+            print "\n[Info] Necesitas extraer (-e) antes los datos, desde las fuentes.\n"
+            print "[Info] Tienes el almacén vacío. Saliendo...\n"
+            sys.exit(2) # return
         self.body_news_stream = []
         self.dates_news_stream = []
         self.author_news_stream = []
@@ -240,7 +272,7 @@ class Propagare(object):
     def stats(self):
         print "\n[Info] Recopilando estadísticas del almacén...\n"
         all_art_stored = self.count_all_stored()
-        if all_art_stored == 0:
+        if all_art_stored == 0 or all_art_stored < 0:
             print '-'*25
             print "\n[Info] Necesitas extraer (-e) antes los datos, desde las fuentes.\n" 
             print "[Info] Tienes el almacén vacío. Saliendo...\n" 
@@ -249,8 +281,9 @@ class Propagare(object):
             print "-"*25
             json_stats = open('data/last_stats.json', "w") # generate json with last stats
             json_stats_data = {}
+            self.generate_data_stream() # generate a 'buffer' stream with records (using json files)
             self.create_sources_list()
-            media_sources = len(self.sources)
+            media_sources = self.count_sources_list()
             print "\n [+] Total medios:", str(media_sources)
             print " [+] Total noticias:", str(all_art_stored) + "\n"
             json_stats_data.update({"Total medios": str(media_sources)})
@@ -271,7 +304,6 @@ class Propagare(object):
             words_counter = 0
             verbs_counter = 0
             authors_counter = 0
-            self.generate_data_stream() # generate a 'buffer' stream with records (using json files)
             for news in self.body_news_stream:
                 news_parsed = self.remove_punctuation(str(news)) # remove punctuation signs / encode from unicode to str
                 news_parsed_noblank = news_parsed
@@ -318,6 +350,9 @@ class Propagare(object):
                     words_7_dict[key] = value
                 if len(key) > 7:
                     words_8_dict[key] = value
+            if self.options.ssource:
+                print '-'*25
+                print "\n[Info] Mostrando estadísticas para:", str(self.options.ssource) + "\n"
             print " [+] Noticia más antigua:",str(min(self.dates_news_stream))
             print " [+] Noticia más reciente:",str(max(self.dates_news_stream)) + "\n"
             json_stats_data.update({"Noticia más antigua": str(min(self.dates_news_stream))})
@@ -466,7 +501,7 @@ class Propagare(object):
         else:
             print "-"*25
         self.generate_data_stream() # generate a 'buffer' stream with all records (using json files)
-        term_reply = str(raw_input("\n $ Introduce una palabra (ex: corrupción): "))
+        term_reply = str(raw_input("\n $ Introduce una palabra (ej: corrupción): "))
         term_reply = " " + term_reply + " " # parse term_reply to use it as a single word
         counter_term = 0
         counter_term_body = 0
@@ -508,6 +543,9 @@ class Propagare(object):
             cl = "titulares"
         else:
             cl = "titulares"
+        if self.options.tsource:
+            print "\n" + '-'*25
+            print "\n[Info] Mostrando resultados en:", str(self.options.tsource)
         print "\n [+] Aparece en: ("+str(counter_term_body)+" "+str(cb)+"), ("+str(counter_term_title)+" "+str(cl)+") y ("+str(counter_term_entry)+" "+str(ce)+")"
         print " [+] Sale un total de: ("+str(counter_term)+" "+str(ct)+")" + "\n"
 
@@ -541,8 +579,7 @@ class Propagare(object):
             try: 
                 self.banner()
                 print "\n[Info] Buscando las fuentes de datos...\n"
-                self.create_sources_list()
-                print "[Info] Accediendo al contenido en línea...\n"
+                print "[Info] Examinando el contenido en línea...\n"
                 sep='=='
                 sep2='?'
                 art_url=''
@@ -566,6 +603,7 @@ class Propagare(object):
                             print "    + ["+str(n)+"]:", m
                         print "" # zen out
                         return
+                self.create_sources_list()
                 for n in self.sources: # n = news media source
                     if n.endswith(""):
                         n_url = n.replace("", "/")
@@ -577,11 +615,12 @@ class Propagare(object):
                     try:
                         reply = urllib2.urlopen(n_url, context=self.ctx).read()
                     except: 
-                        print('\n[Error] - Imposible conectar con: ') + n + '\n'
-                        return
+                        print('\n[Error] - Imposible conectar con: ') + n
+                        pass
                     f = open('sources/'+ n)
                     regex = f.readlines()
                     f.close()
+                    #print reply # nice to have this output for dev new modules
                     for r in regex: # extract specific keywords from news: time, author, url (+variations), title, description, body
                         if ('art_url==' or 'art_url2==') in r:
                             art_url = r
@@ -607,17 +646,28 @@ class Propagare(object):
                             art_body = r
                             regex_art_body = str(art_body.split(sep, 1)[1]) # regex magics (art_body)
                             pattern_art_body = re.compile(regex_art_body, re.MULTILINE)
-                    art_url_found = re.findall(pattern_art_url, reply) # found art_url patterns on main page
-                    art_url_parsed = self.check_art_repetitions(n, art_url_found) # discard results previously stored
+                    try:
+                        art_url_found = re.findall(pattern_art_url, reply) # found art_url patterns on main page
+                        art_url_parsed = self.check_art_repetitions(n, art_url_found) # discard results previously stored
+                    except: 
+                        art_url_parsed = None
+                        pass
                     art_stored = self.count_art_stored(n)
                     if not art_url_parsed and art_stored > 0: # not any new article found + some articles stored 
                         pass
                     elif len(art_url_parsed) is 0 and art_stored is 0: # not any new article found + not any article stored
-                        print "\n[Info] Nuevos artículos encontrados: 0 | Total artículos almacenados: " + str(art_stored) + "\n"
+                        print "[Info] Nuevos artículos encontrados: 0 | Total artículos almacenados (de ésta fuente): " + str(art_stored) + "\n"
                         return
                     else: # new article found
                         print "" # zen out
                         for a in art_url_parsed:
+                            if "eldiario.es" in n: # re-parsing website: eldiario.es [09/05/2018]
+                                if '" title="' in a:
+                                    a = str(a.split('"', 1)[0])
+                                if '">' in a:
+                                    a = str(a.split('"', 1)[0])
+                                if "rastreador" in a or "http" in a or "autores" in a or "www.eldiario.es" in a or "/carnecruda" in a or "/contenido_patrocinado" in a:
+                                    a = None
                             if "elpais.com" in n: # re-parsing website: elpais.com [24/04/2018]
                                 if "?" in a:
                                     a = str(a.split(sep2, 1)[0])
@@ -627,110 +677,151 @@ class Propagare(object):
                                     a = "https:/" + a
                                 else:
                                     a = n_url + "/" + a
-                            print "    + [IA]:", a
-                            art_url_list.append(a) # crawlered pages from main website
-                        print "\n[Info] Nuevos artículos encontrados: " + str(len(art_url_list)) + " | Total artículos almacenados: " + str(art_stored) + "\n"
-                        print "- Extrayendo:", n_url
-                        if not os.path.exists('data/'):
-                            os.makedirs('data/')
-                        if not os.path.exists('data/' + n):
-                            os.makedirs('data/' + n)
-                        for a in art_url_list:
-                            num=num+1 # art counter
-                            json_data = {} # json dict stream buffer
-                            if '"' in a: # re-parse url searching for " after it
-                                sep = '"'
-                                a = str(a.split(sep, 1)[0])
-                            print "\n    + ["+str(num)+"/"+str(len(art_url_list))+"] Visitando:", a
-                            self.user_agent = random.choice(self.agents).strip() # suffle user-agent
-                            headers = {'User-Agent' : self.user_agent, 'Referer' : self.referer} # set user-agent and referer
-                            try:
-                                reply_art = urllib2.urlopen(a, context=self.ctx).read()
-                            except: 
-                                print('\n[Error] - Imposible conectar con: ') + a + '\n'
-                                return
-                            art_url_author_found = re.findall(pattern_art_author, reply_art) # found art_author pattern on page
-                            if not art_url_author_found:
-                                for r in regex: # extract another combination
-                                    if 'art_author2==' in r:
-                                        art_author = r
-                                        regex_art_author = str(art_author.split(sep, 1)[1]) # re-regex magics (art_author)
-                                        pattern_art_author = re.compile(regex_art_author)
-                                art_url_author_found = re.findall(pattern_art_author, reply_art) # try another art_author pattern on page
-                            if not art_url_author_found: # not any author found using regex (use default for each media)
-                                if "elpais.com" in n: # default author for elpais.com when not signed
-                                    art_url_author_found.append("Ediciones El País") 
-                            else:
-                                if "elpais.com" in n: # based on specific reg exp.
+                            if a is not None:
+                                if "eldiario.es" in n: # re-parsing website: eldiario.es [09/05/2018]
+                                    a = "https://eldiario.es" + a
+                                if a not in art_url_list:
+                                    check_pass = self.check_art_exists(a, n) # check if art found is previously stored for this media
+                                    if check_pass is True or check_pass is None:
+                                        art_url_list.append(a) # crawlered pages from main website
+                                        print "    + [IA]:", a
+                        if not art_url_list:
+                            pass
+                        else:
+                            print "\n[Info] Nuevos artículos encontrados: " + str(len(art_url_list)) + " | Total artículos almacenados (de ésta fuente): " + str(art_stored) + "\n"
+                            print "- Extrayendo:", n_url
+                            if not os.path.exists('data/'):
+                                os.makedirs('data/')
+                            if not os.path.exists('data/' + n):
+                                os.makedirs('data/' + n)
+                            for a in art_url_list:
+                                num=num+1 # art counter
+                                json_data = {} # json dict stream buffer
+                                if '"' in a: # re-parse url searching for " after it
                                     sep = '"'
+                                    a = str(a.split(sep, 1)[0])
+                                print "\n    + ["+str(num)+"/"+str(len(art_url_list))+"] Visitando:", a
+                                self.user_agent = random.choice(self.agents).strip() # suffle user-agent
+                                headers = {'User-Agent' : self.user_agent, 'Referer' : self.referer} # set user-agent and referer
+                                try:
+                                    reply_art = urllib2.urlopen(a, context=self.ctx).read()
+                                except: 
+                                    print('\n[Error] - Imposible conectar con: ') + a
+                                    return
+                                art_url_author_found = re.findall(pattern_art_author, reply_art) # found art_author pattern on page
+                                if not art_url_author_found:
+                                    for r in regex: # extract another combination
+                                        if 'art_author2==' in r:
+                                            art_author = r
+                                            try:
+                                                regex_art_author = str(art_author.split(sep, 1)[1]) # re-regex magics (art_author)
+                                                pattern_art_author = re.compile(regex_art_author)
+                                            except:
+                                                break
+                                    art_url_author_found = re.findall(pattern_art_author, reply_art) # try another art_author pattern on page
+                                if not art_url_author_found: # not any author found using regex (use default for each media)
+                                    if "elpais.com" in n: # default author for elpais.com when not signed
+                                        art_url_author_found.append("Ediciones El País")
+                                    if "eldiario.es" in n: # default author for elpais.com when not signed
+                                        art_url_author_found.append("Ediciones El Diario")
+                                else:
+                                    if "elpais.com" in n: # based on specific reg exp.
+                                        sep = '"'
+                                        for author in art_url_author_found:
+                                            art_url_author_found.remove(author)
+                                            author = str(author.split(sep, 1)[0])
+                                            art_url_author_found.append(author)
+                                art_url_time_found = re.findall(pattern_art_time, reply_art) # found art_time pattern on page
+                                art_url_title_found = re.findall(pattern_art_title, reply_art) # found art_title pattern on page
+                                art_url_description_found = re.findall(pattern_art_description, reply_art) # found art_description pattern on page 
+                                art_url_body_found = re.findall(pattern_art_body, reply_art) # found art_body pattern on page (MULTILIN)
+                                if not art_url_body_found: # not any body found
+                                    if "eldiario.es" in n:
+                                        for r in regex: # extract another combination
+                                            if 'art_body2==' in r:
+                                                art_body = r
+                                                regex_art_body = str(art_body.split(sep, 1)[1])
+                                                pattern_art_body = re.compile(regex_art_body)
+                                        art_url_body_found = re.findall(pattern_art_body, reply_art) 
+                                time.sleep(0.1) # tic, tac!!!
+                                self.update_progress("\n      - ETA", num, len(art_url_list))
+                                print "" # zen out
+                                if "elpais.com" in a: # parsing urls [24/04/2018] # regex schema: https://elpais.com/category/date/tag/ID
+                                    a_path = a.replace("https://elpais.com/","") # remove pre-url
+                                    a_path = a_path.replace(".html","") # remove post-url
+                                    if "elpais.com" in a_path: # re-parsing url [24/04/2018] # regex schema: https://location.elpais.com/...
+                                        a_path = a_path.split("elpais.com/")
+                                        a_path = a_path[1]
+                                if "eldiario" in a: # parsing urls [08/05/2018] # regex schema: https://eldiario.es/category/{tag}/ID
+                                    a_path = a.replace("https://eldiario.es/","") # remove pre-url
+                                    a_path = a_path.replace(".html","") # remove post-url
+                                if "/" in a_path: # / mostly used like url-category sep keyword
+                                    a_path = a_path.split("/")
+                                    if "eldiario.es" in a:
+                                        category = a_path[0]
+                                        ID = a_path[1]
+                                        if not os.path.exists('data/'+n+"/"+category):
+                                            os.makedirs('data/'+n+"/"+category)
+                                        if not os.path.exists('data/'+n+"/"+category+"/"+ID):
+                                            os.makedirs('data/'+n+"/"+category+"/"+ID)
+                                        path = 'data/'+n+"/"+category+"/"+ID+"/"+ID+".txt" # set path to file 
+                                        self.generate_json(n, category, None, None, ID) # generate .json         
+                                    if "elpais.com" in a:
+                                        category = a_path[0]
+                                        date_year = a_path[1] 
+                                        date_month = a_path[2]
+                                        date_day = a_path[3] 
+                                        date = date_year + "_" + date_month + "_" + date_day # date: year/month/day
+                                        tag = a_path[4]
+                                        ID = a_path[5]
+                                        if not os.path.exists('data/'+n+"/"+category):
+                                            os.makedirs('data/'+n+"/"+category)
+                                        if not os.path.exists('data/'+n+"/"+category+"/"+date):
+                                            os.makedirs('data/'+n+"/"+category+"/"+date)
+                                        if not os.path.exists('data/'+n+"/"+category+"/"+date+"/"+tag):
+                                            os.makedirs('data/'+n+"/"+category+"/"+date+"/"+tag)
+                                        if not os.path.exists('data/'+n+"/"+category+"/"+date+"/"+tag+"/"+ID): # create new record
+                                            os.makedirs('data/'+n+"/"+category+"/"+date+"/"+tag+"/"+ID)  
+                                        path = 'data/'+n+"/"+category+"/"+date+"/"+tag+"/"+ID+"/"+ID+".txt" # set path to file                  
+                                        self.generate_json(n, category, date, tag, ID) # generate .json
+                                    fs = open(path, "w") # generate .txt
+                                    fs.write("Fuente: " + str(a).encode('utf-8') + "\n") # write source url
+                                    json_data.update({"Fuente": str(a)})
+                                    for t in art_url_time_found:
+                                        fs.write("Fecha de publicación: " + str(t).encode('utf-8') + "\n") # write time
+                                        json_data.update({"Fecha de publicación": str(t)})
                                     for author in art_url_author_found:
-                                        art_url_author_found.remove(author)
-                                        author = str(author.split(sep, 1)[0])
-                                        art_url_author_found.append(author)
-                            art_url_time_found = re.findall(pattern_art_time, reply_art) # found art_time pattern on page
-                            art_url_title_found = re.findall(pattern_art_title, reply_art) # found art_title pattern on page
-                            art_url_description_found = re.findall(pattern_art_description, reply_art) # found art_description pattern on page 
-                            art_url_body_found = re.findall(pattern_art_body, reply_art) # found art_body pattern on page (MULTILIN)
-                            time.sleep(0.1) # tic, tac!!!
-                            self.update_progress("\n      - ETA", num, len(art_url_list))
-                            print "" # zen out
-                            if "elpais.com" in a: # parsing urls [24/04/2018] # regex schema: https://elpais.com/category/date/tag/ID
-                                a_path = a.replace("https://elpais.com/","") # remove pre-url
-                                a_path = a_path.replace(".html","") # remove post-url
-                                if "elpais.com" in a_path: # re-parsing url [24/04/2018] # regex schema: https://location.elpais.com/...
-                                    a_path = a_path.split("elpais.com/")
-                                    a_path = a_path[1]
-                            if "/" in a_path: # / mostly used like url-category sep keyword
-                                a_path = a_path.split("/")
-                                category = a_path[0]
-                                date_year = a_path[1] 
-                                date_month = a_path[2]
-                                date_day = a_path[3] 
-                                date = date_year + "_" + date_month + "_" + date_day # date: year/month/day
-                                tag = a_path[4]
-                                ID = a_path[5]
-                                if not os.path.exists('data/'+n+"/"+category):
-                                    os.makedirs('data/'+n+"/"+category)
-                                if not os.path.exists('data/'+n+"/"+category+"/"+date):
-                                    os.makedirs('data/'+n+"/"+category+"/"+date)
-                                if not os.path.exists('data/'+n+"/"+category+"/"+date+"/"+tag):
-                                    os.makedirs('data/'+n+"/"+category+"/"+date+"/"+tag)
-                                if not os.path.exists('data/'+n+"/"+category+"/"+date+"/"+tag+"/"+ID): # create new record
-                                    os.makedirs('data/'+n+"/"+category+"/"+date+"/"+tag+"/"+ID)  
-                                path = 'data/'+n+"/"+category+"/"+date+"/"+tag+"/"+ID+"/"+ID+".txt" # set path to file                      
-                                fs = open(path, "w") # generate .txt
-                                self.generate_json(n, category, date, tag, ID) # generate .json
-                                fs.write("Fuente: " + str(a).encode('utf-8') + "\n") # write source url
-                                json_data.update({"Fuente": str(a)})
-                                for t in art_url_time_found:
-                                    fs.write("Fecha de publicación: " + str(t).encode('utf-8') + "\n") # write time
-                                    json_data.update({"Fecha de publicación": str(t)})
-                                for author in art_url_author_found:
-                                    if "\t" in author:
-                                        author = author.split('\t', 1)[1] # re-parse for \t
-                                    fs.write("Autor(a): " + str(author).encode('utf-8') + "\n") # write author
-                                    json_data.update({"Autor(a)": str(author)})
-                                for title in art_url_title_found:
-                                    title = self.format_content(title) # funct to parse and format html (+glitches) content
-                                    fs.write("Titular: " + str(title).encode('utf-8') + "\n") # write title
-                                    json_data.update({"Titular": str(title)})
-                                for description in art_url_description_found:
-                                    description = self.format_content(description) 
-                                    fs.write("Entrada: " + str(description).encode('utf-8') + "\n") # write description
-                                    json_data.update({"Entrada": str(description)})
-                                body_complete = ""
-                                for body in art_url_body_found:
-                                    if "elpais.com" in a: 
-                                        body = body.replace("<span>Explora nuestras historias</span> por temas","")
-                                        body = body.replace("Recibe nuestra newsletter", "")
-                                    body_complete += body + "\n\n"
-                                body_parsed = self.format_content(body_complete) 
-                                fs.write("\n" + str(body_parsed).encode('utf-8')) # write (plain text) body without keyword
-                                json_data.update({"Noticia": str(body_parsed)})
-                                self.json_report.write(json.dumps(json_data, sort_keys=True, indent=2, separators=(',', ':'), ensure_ascii=False)) # json dump
-                                fs.close() # close .txt
-                                self.json_report.close() # close .json
-                    print "\n[Info] Nuevos artículos descargados: " + str(num) + " | Total artículos almacenados: " + str(art_stored+num) + "\n"  
+                                        if "\t" in author:
+                                            author = author.split('\t', 1)[1] # re-parse for \t
+                                        fs.write("Autor(a): " + str(author).encode('utf-8') + "\n") # write author
+                                        json_data.update({"Autor(a)": str(author)})
+                                    for title in art_url_title_found:
+                                        title = self.format_content(title) # funct to parse and format html (+glitches) content
+                                        fs.write("Titular: " + str(title).encode('utf-8') + "\n") # write title
+                                        json_data.update({"Titular": str(title)})
+                                    for description in art_url_description_found:
+                                        description_parsed = self.format_content(description) 
+                                        fs.write("Entrada: " + str(description_parsed).encode('utf-8') + "\n") # write description
+                                        json_data.update({"Entrada": str(description_parsed)})
+                                    body_complete = ""
+                                    for body in art_url_body_found:
+                                        if "elpais.com" in a: 
+                                            body = body.replace("<span>Explora nuestras historias</span> por temas","")
+                                            body = body.replace("Recibe nuestra newsletter", "")
+                                        body_complete += body + "\n\n"
+                                    body_parsed = self.format_content(body_complete) 
+                                    fs.write("\n" + str(body_parsed).encode('utf-8')) # write (plain text) body without keyword
+                                    json_data.update({"Noticia": str(body_parsed)})
+                                    self.json_report.write(json.dumps(json_data, sort_keys=True, indent=2, separators=(',', ':'), ensure_ascii=False)) # json dump
+                                    fs.close() # close .txt
+                                    self.json_report.close() # close .json
+                                    self.total_num = self.total_num + 1
+                    num = 0 # flush art found counter
+                    art_url_list = [] # flush art list
+                all_art_stored = self.count_all_stored()
+                if not self.total_num:
+                    self.total_num = 0
+                print "\n[Info] Nuevos artículos descargados: " + str(self.total_num) + " | Total artículos almacenados (de todas las fuentes): " + str(all_art_stored) + "\n"  
                 if not self.options.forceno:
                     print "-"*25
                     stats_reply = raw_input("¿Quieres ver las estadísticas comparadas (S/n)?\n")
