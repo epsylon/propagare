@@ -19,7 +19,7 @@ from subprocess import Popen as execute
 class Updater(object):   
     def __init__(self):
         GIT_REPOSITORY = "https://github.com/epsylon/propagare"
-        rootDir = os.path.abspath(os.path.join(os.path.dirname( __file__ ), '..', ''))
+        rootDir = os.path.abspath(os.path.join(os.path.dirname( __file__ ), '../../', ''))
         if not os.path.exists(os.path.join(rootDir, ".git")):
             print " [Info] No se ha encontrado ningún respositorio: .git!\n"
             print "="*30
