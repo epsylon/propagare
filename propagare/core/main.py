@@ -28,7 +28,7 @@ DEBUG = False
 
 class Propagare(object):
     def __init__(self):
-        self.supported_media = ["elpais.com", "eldiario.es"] # media sources modules currently implemented
+        self.supported_media = ["elpais.com", "eldiario.es", "elmundo.es"] # media sources modules currently implemented
         self.check_verb_online = "https://www.esfacil.eu/es/verbos/conjugacion.html?infinitive=" # for check spanish verbs online
         self.sources = [] # used for news media sources
         self.agents_file = 'core/txt/user-agents.txt' # set source path to retrieve user-agents
@@ -100,8 +100,13 @@ class Propagare(object):
             self.json_report = open('data/'+n+"/"+category+"/"+date+"/"+tag+"/"+ID+"/"+ID+".json", "w") 
         if "eldiario.es" in n:
             self.json_report = open('data/'+n+"/"+category+"/"+ID+"/"+ID+".json", "w")
+        if "elmundo.es" in n:
+            if tag is None:
+                self.json_report = open('data/'+n+"/"+category+"/"+date+"/"+ID+".json", "w")
+            else:
+                self.json_report = open('data/'+n+"/"+category+"/"+date+"/"+tag+"/"+ID+".json", "w")
 
-    def format_content(self, body_complete):
+    def format_content(self, data):
         html_parser = html2text.HTML2Text()
         html_parser.ignore_links = True
         html_parser.ignore_images = True
@@ -109,10 +114,11 @@ class Propagare(object):
         html_parser.bypass_tables = True 
         html_parser.unicode_snob = True
         html_parser.skip_internal_links = True
-        body_parsed = html_parser.handle(body_complete)
-        body_parsed = body_parsed.replace("\n", " ") # clean \n
-        body_parsed = body_parsed.replace('\"', " ") # clean \"
-        return body_parsed
+        parsed = html_parser.handle(data)
+        parsed = parsed.replace("\n", " ") # clean \n
+        parsed = parsed.replace('\"', " ") # clean \"
+        parsed = parsed.replace("#","") # clean #
+        return parsed
 
     def count_all_stored(self): # all sources
         art_stored = 0
@@ -237,7 +243,10 @@ class Propagare(object):
                 if fl.endswith(".json"): # extract content from json archives
                     p=os.path.join(root,fl)
                     kf = io.open(os.path.abspath(p), encoding='utf-8') 
-                    data = str(kf.read().decode('utf-8')) 
+                    try:
+                        data = str(kf.read().encode('utf-8'))
+                    except:
+                        data = kf.read()
                     try:
                         self.jdata.append(json.loads(data))
                     except:
@@ -363,13 +372,13 @@ class Propagare(object):
                 lw_max = "vez"
             else:
                 lw_max = "veces"
-            print " [+] Símbolo más utilizado: '"+str(max(letters_dict.iteritems(), key=operator.itemgetter(1))[0])+ "' ("+ str(max(letters_dict.iteritems(), key=operator.itemgetter(1))[1])+ " " + lw_max + ")"
+            print " [+] Símbolo más utilizado: '"+str(max(letters_dict.iteritems(), key=operator.itemgetter(1))[0]).encode('utf-8').strip() + "' ("+ str(max(letters_dict.iteritems(), key=operator.itemgetter(1))[1])+ " " + lw_max + ")"
             json_stats_data.update({"Símbolo más utilizado": "'"+str(max(letters_dict.iteritems(), key=operator.itemgetter(1))[0])+ "' ("+ str(max(letters_dict.iteritems(), key=operator.itemgetter(1))[1])+ " " + lw_max + ")"}) 
             if min(letters_dict.iteritems(), key=operator.itemgetter(1))[1] < 2:
                 lw_min = "vez"
             else:
                 lw_min = "veces"
-            print " [+] Símbolo menos repetido: '"+ str(min(letters_dict.iteritems(), key=operator.itemgetter(1))[0])+ "' ("+ str(min(letters_dict.iteritems(), key=operator.itemgetter(1))[1])+ " " + lw_min + ")" + "\n"
+            print " [+] Símbolo menos repetido: '"+ str(min(letters_dict.iteritems(), key=operator.itemgetter(1))[0]).encode('utf-8').strip() + "' ("+ str(min(letters_dict.iteritems(), key=operator.itemgetter(1))[1])+ " " + lw_min + ")" + "\n"
             json_stats_data.update({"Símbolo menos repetido": "'"+str(min(letters_dict.iteritems(), key=operator.itemgetter(1))[0])+ "' ("+ str(min(letters_dict.iteritems(), key=operator.itemgetter(1))[1])+ " " + lw_min + ")"}) 
             print " [+] Total palabras:", str(sum(words_dict.values())) + " (diferentes: "+ str(len(words_dict)) + ")"  
             json_stats_data.update({"Total palabras": str(sum(words_dict.values())) + " (diferentes: "+ str(len(words_dict)) + ")" }) 
@@ -377,56 +386,56 @@ class Propagare(object):
                 lw_max = "vez"
             else:
                 lw_max = "veces"
-            print " [+] Palabra más repetida: '"+ str(max(words_dict.iteritems(), key=operator.itemgetter(1))[0])+ "' ("+ str(max(words_dict.iteritems(), key=operator.itemgetter(1))[1]) + " " + lw_max + ")"
+            print " [+] Palabra más repetida: '"+ str(max(words_dict.iteritems(), key=operator.itemgetter(1))[0]).encode('utf-8').strip() + "' ("+ str(max(words_dict.iteritems(), key=operator.itemgetter(1))[1]) + " " + lw_max + ")"
             json_stats_data.update({"Palabra más repetida":  "'"+str(max(words_dict.iteritems(), key=operator.itemgetter(1))[0])+ "' ("+ str(max(words_dict.iteritems(), key=operator.itemgetter(1))[1]) + " " + lw_max + ")"}) 
             if max(words_3_dict.iteritems(), key=operator.itemgetter(1))[1] < 2:
                 lw_max = "vez"
             else:
                 lw_max = "veces"
-            print "      - 3 letras: '"+ str(max(words_3_dict.iteritems(), key=operator.itemgetter(1))[0])+ "' ("+ str(max(words_3_dict.iteritems(), key=operator.itemgetter(1))[1]) + " " + lw_max + ")"
+            print "      - 3 letras: '"+ str(max(words_3_dict.iteritems(), key=operator.itemgetter(1))[0]).encode('utf-8').strip() + "' ("+ str(max(words_3_dict.iteritems(), key=operator.itemgetter(1))[1]) + " " + lw_max + ")"
             json_stats_data.update({"Palabra más repetida (3 letras)":  "'"+str(max(words_3_dict.iteritems(), key=operator.itemgetter(1))[0])+ "' ("+ str(max(words_3_dict.iteritems(), key=operator.itemgetter(1))[1]) + " " + lw_max + ")"}) 
             if max(words_4_dict.iteritems(), key=operator.itemgetter(1))[1] < 2:
                 lw_max = "vez"
             else:
                 lw_max = "veces"
-            print "      - 4 letras: '"+ str(max(words_4_dict.iteritems(), key=operator.itemgetter(1))[0])+ "' ("+ str(max(words_4_dict.iteritems(), key=operator.itemgetter(1))[1]) + " " + lw_max + ")"
+            print "      - 4 letras: '"+ str(max(words_4_dict.iteritems(), key=operator.itemgetter(1))[0]).encode('utf-8').strip() + "' ("+ str(max(words_4_dict.iteritems(), key=operator.itemgetter(1))[1]) + " " + lw_max + ")"
             json_stats_data.update({"Palabra más repetida (4 letras)":  "'"+str(max(words_4_dict.iteritems(), key=operator.itemgetter(1))[0])+ "' ("+ str(max(words_4_dict.iteritems(), key=operator.itemgetter(1))[1]) + " " + lw_max + ")"}) 
             if max(words_5_dict.iteritems(), key=operator.itemgetter(1))[1] < 2:
                 lw_max = "vez"
             else:
                 lw_max = "veces"
-            print "      - 5 letras: '"+ str(max(words_5_dict.iteritems(), key=operator.itemgetter(1))[0])+ "' ("+ str(max(words_5_dict.iteritems(), key=operator.itemgetter(1))[1]) + " " + lw_max + ")"
+            print "      - 5 letras: '"+ str(max(words_5_dict.iteritems(), key=operator.itemgetter(1))[0]).encode('utf-8').strip() + "' ("+ str(max(words_5_dict.iteritems(), key=operator.itemgetter(1))[1]) + " " + lw_max + ")"
             json_stats_data.update({"Palabra más repetida (5 letras)":  "'"+str(max(words_5_dict.iteritems(), key=operator.itemgetter(1))[0])+ "' ("+ str(max(words_5_dict.iteritems(), key=operator.itemgetter(1))[1]) + " " + lw_max + ")"}) 
             if max(words_6_dict.iteritems(), key=operator.itemgetter(1))[1] < 2:
                 lw_max = "vez"
             else:
                 lw_max = "veces"
-            print "      - 6 letras: '"+ str(max(words_6_dict.iteritems(), key=operator.itemgetter(1))[0])+ "' ("+ str(max(words_6_dict.iteritems(), key=operator.itemgetter(1))[1]) + " " + lw_max + ")"
+            print "      - 6 letras: '"+ str(max(words_6_dict.iteritems(), key=operator.itemgetter(1))[0]).encode('ISO-8859-1').strip() + "' ("+ str(max(words_6_dict.iteritems(), key=operator.itemgetter(1))[1]) + " " + lw_max + ")"
             json_stats_data.update({"Palabra más repetida (6 letras)":  "'"+str(max(words_6_dict.iteritems(), key=operator.itemgetter(1))[0])+ "' ("+ str(max(words_6_dict.iteritems(), key=operator.itemgetter(1))[1]) + " " + lw_max + ")"}) 
             if max(words_7_dict.iteritems(), key=operator.itemgetter(1))[1] < 2:
                 lw_max = "vez"
             else:
                 lw_max = "veces"
-            print "      - 7 letras: '"+ str(max(words_7_dict.iteritems(), key=operator.itemgetter(1))[0])+ "' ("+ str(max(words_7_dict.iteritems(), key=operator.itemgetter(1))[1]) + " " + lw_max + ")"
+            print "      - 7 letras: '"+ str(max(words_7_dict.iteritems(), key=operator.itemgetter(1))[0]).encode('utf-8').strip() + "' ("+ str(max(words_7_dict.iteritems(), key=operator.itemgetter(1))[1]) + " " + lw_max + ")"
             json_stats_data.update({"Palabra más repetida (7 letras)":  "'"+str(max(words_7_dict.iteritems(), key=operator.itemgetter(1))[0])+ "' ("+ str(max(words_7_dict.iteritems(), key=operator.itemgetter(1))[1]) + " " + lw_max + ")"}) 
             if max(words_8_dict.iteritems(), key=operator.itemgetter(1))[1] < 2:
                 lw_max = "vez"
             else:
                 lw_max = "veces"
-            print "      - 8+ letras: '"+ str(max(words_8_dict.iteritems(), key=operator.itemgetter(1))[0])+ "' ("+ str(max(words_8_dict.iteritems(), key=operator.itemgetter(1))[1]) + " " + lw_max + ")" + "\n"
+            print "      - 8+ letras: '"+ str(max(words_8_dict.iteritems(), key=operator.itemgetter(1))[0]).encode('utf-8').strip() + "' ("+ str(max(words_8_dict.iteritems(), key=operator.itemgetter(1))[1]) + " " + lw_max + ")" + "\n"
             json_stats_data.update({"Palabra más repetida (8 letras)":  "'"+str(max(words_8_dict.iteritems(), key=operator.itemgetter(1))[0])+ "' ("+ str(max(words_8_dict.iteritems(), key=operator.itemgetter(1))[1]) + " " + lw_max + ")"}) 
             if min(words_dict.iteritems(), key=operator.itemgetter(1))[1] < 2:
                 lw_min = "vez"
             else:
                 lw_min = "veces"
-            print " [+] Palabra menos repetida: '"+ str(min(words_dict.iteritems(), key=operator.itemgetter(1))[0]) + "' ("+ str(min(words_dict.iteritems(), key=operator.itemgetter(1))[1]) + " " + lw_min + ")"
+            print " [+] Palabra menos repetida: '"+ str(min(words_dict.iteritems(), key=operator.itemgetter(1))[0]).encode('utf-8').strip() + "' ("+ str(min(words_dict.iteritems(), key=operator.itemgetter(1))[1]) + " " + lw_min + ")"
             json_stats_data.update({"Palabra menos repetida":  "'"+str(min(words_dict.iteritems(), key=operator.itemgetter(1))[0]) + "' ("+ str(min(words_dict.iteritems(), key=operator.itemgetter(1))[1]) + " " + lw_min + ")"}) 
             if max(words_8_dict.iteritems(), key=len)[1] < 2:
                 lw_max = "vez"
             else:
                 lw_max = "veces"
-            print " [+] Palabra más larga y que más se usa: '"+ str(max(words_8_dict.iteritems(), key=len)[0]) + "' ("+ str(max(words_8_dict.iteritems(), key=len)[1]) + " " + lw_max + ")" + "\n"
-            json_stats_data.update({"Palabra más larga y que más se usa":  "'"+str(max(words_8_dict.iteritems(), key=len)[0]) + "' ("+ str(max(words_8_dict.iteritems(), key=len)[1]) + " " + lw_max + ")"}) 
+            print " [+] Palabra más larga y que más se usa: '"+ str(max(words_8_dict.iteritems(), key=len)[0]).encode('ISO-8859-1').strip() + "' ("+ str(max(words_8_dict.iteritems(), key=len)[1]) + " " + lw_max + ")" + "\n"
+            json_stats_data.update({"Palabra más larga y que más se usa":  "'"+str(max(words_8_dict.iteritems(), key=len)[0]).encode('ISO-8859-1').strip() + "' ("+ str(max(words_8_dict.iteritems(), key=len)[1]).encode('ISO-8859-1').strip() + " " + lw_max + ")"}) 
             if self.options.checkverbs: 
                 verb_flag = False
                 num = 0
@@ -485,8 +494,10 @@ class Propagare(object):
                     lg = "noticia"
                 else:
                     lg = "noticias"
-                print "      - '"+str(a) + "' ("+ str(c) + " " + lg + ")"
-                json_stats_data["Autor(a)-["+str(num)+"]"] = str(a) + "' ("+ str(c) + " " + lg + ")"
+                a = unicode(a)
+                a = str(a.encode('utf-8').encode('ISO-8859-1'))
+                print "      - '"+str(a).title() + "' ("+ str(c) + " " + lg + ")"
+                json_stats_data["Autor(a)-["+str(num)+"]"] = str(a).title() + "' ("+ str(c) + " " + lg + ")"
             json_stats.write(json.dumps(json_stats_data, sort_keys=True, indent=2, separators=(',', ':'), ensure_ascii=False)) # write stats to json file
             json_stats.close() # close .json                   
 
@@ -608,7 +619,10 @@ class Propagare(object):
                     if n.endswith(""):
                         n_url = n.replace("", "/")
                     if not n.startswith("http"):
-                        n_url = "https://" + n
+                        if n == "elmundo.es": # this media only supports access using www
+                            n_url = "https://www." + n
+                        else:
+                            n_url = "https://" + n # SSL only
                     print "- Visitando:", n_url
                     self.user_agent = random.choice(self.agents).strip() # suffle user-agent
                     headers = {'User-Agent' : self.user_agent, 'Referer' : self.referer} # set fake user-agent and referer
@@ -653,14 +667,24 @@ class Propagare(object):
                         art_url_parsed = None
                         pass
                     art_stored = self.count_art_stored(n)
+                    if not art_url_parsed and not art_stored:
+                        print "\n[Info] Nuevos artículos encontrados: 0 | Total artículos almacenados (de ésta fuente): 0\n"
+                        return
                     if not art_url_parsed and art_stored > 0: # not any new article found + some articles stored 
                         pass
                     elif len(art_url_parsed) is 0 and art_stored is 0: # not any new article found + not any article stored
-                        print "[Info] Nuevos artículos encontrados: 0 | Total artículos almacenados (de ésta fuente): " + str(art_stored) + "\n"
+                        print "\n[Info] Nuevos artículos encontrados: 0 | Total artículos almacenados (de ésta fuente): " + str(art_stored) + "\n"
                         return
                     else: # new article found
                         print "" # zen out
                         for a in art_url_parsed:
+                            if "elmundo.es" in n: # re-parsing website: elmundo.es [10/05/2018]
+                                if '"' in a:
+                                    a = str(a.split('"', 1)[0])
+                                if '#' in a:
+                                    a = str(a.split('#', 1)[0])
+                                if not "http" in a or not "www.elmundo.es" in a or "vivienda" in a or "horoscopo" in a or "menu" in a or "?" in a or "indices" in a or "programacion-tv" in a:
+                                    a = None
                             if "eldiario.es" in n: # re-parsing website: eldiario.es [09/05/2018]
                                 if '" title="' in a:
                                     a = str(a.split('"', 1)[0])
@@ -720,6 +744,8 @@ class Propagare(object):
                                                 break
                                     art_url_author_found = re.findall(pattern_art_author, reply_art) # try another art_author pattern on page
                                 if not art_url_author_found: # not any author found using regex (use default for each media)
+                                    if "elmundo.es" in n: # default author for elmundo.es when not signed
+                                        art_url_author_found.append("Ediciones El Mundo")
                                     if "elpais.com" in n: # default author for elpais.com when not signed
                                         art_url_author_found.append("Ediciones El País")
                                     if "eldiario.es" in n: # default author for elpais.com when not signed
@@ -746,17 +772,53 @@ class Propagare(object):
                                 time.sleep(0.1) # tic, tac!!!
                                 self.update_progress("\n      - ETA", num, len(art_url_list))
                                 print "" # zen out
-                                if "elpais.com" in a: # parsing urls [24/04/2018] # regex schema: https://elpais.com/category/date/tag/ID
-                                    a_path = a.replace("https://elpais.com/","") # remove pre-url
+                                if "elmundo.es" in a: # [10/05/2018] # schema: https://www.elmundo.es/category/{tag}/date/ID
+                                    a_path = a.replace("http://www.elmundo.es/","") # remove pre-url (note: http)
                                     a_path = a_path.replace(".html","") # remove post-url
-                                    if "elpais.com" in a_path: # re-parsing url [24/04/2018] # regex schema: https://location.elpais.com/...
+                                if "elpais.com" in a: # [24/04/2018] # schema: https://elpais.com/category/date/tag/ID
+                                    a_path = a.replace("https://elpais.com/","") # remove pre-url
+                                    a_path = a_path.split(".html") # remove post-url
+                                    if "elpais.com" in a_path: # re-parsing url [24/04/2018] # schema: https://loc.elpais.com/...
                                         a_path = a_path.split("elpais.com/")
                                         a_path = a_path[1]
-                                if "eldiario" in a: # parsing urls [08/05/2018] # regex schema: https://eldiario.es/category/{tag}/ID
+                                if "eldiario.es" in a: # [08/05/2018] # schema: https://eldiario.es/category/{tag}/ID
                                     a_path = a.replace("https://eldiario.es/","") # remove pre-url
                                     a_path = a_path.replace(".html","") # remove post-url
                                 if "/" in a_path: # / mostly used like url-category sep keyword
                                     a_path = a_path.split("/")
+                                    if "elmundo.es" in a:
+                                        try: # try with /tag/
+                                            category = a_path[0]
+                                            date_year = a_path[2]
+                                            date_month = a_path[3]
+                                            date_day = a_path[4]
+                                            date = date_year + "_" + date_month + "_" + date_day # date: year/month/day
+                                            tag = a_path[1]
+                                            ID = a_path[5]
+                                            if not os.path.exists('data/'+n+"/"+category):
+                                                os.makedirs('data/'+n+"/"+category)
+                                            if not os.path.exists('data/'+n+"/"+category+"/"+date):
+                                                os.makedirs('data/'+n+"/"+category+"/"+date)
+                                            if not os.path.exists('data/'+n+"/"+category+"/"+date+"/"+tag): # create new record
+                                                os.makedirs('data/'+n+"/"+category+"/"+date+"/"+tag)
+                                            path = 'data/'+n+"/"+category+"/"+date+"/"+tag+"/"+ID+".txt" # set path to file 
+                                            self.generate_json(n, category, date, tag, ID) # generate .json  
+                                        except:
+                                            try:
+                                                category = a_path[0]
+                                                date_year = a_path[1]
+                                                date_month = a_path[2]
+                                                date_day = a_path[3]
+                                                date = date_year + "_" + date_month + "_" + date_day # date: year/month/day
+                                                ID = a_path[4]
+                                                if not os.path.exists('data/'+n+"/"+category):
+                                                    os.makedirs('data/'+n+"/"+category)
+                                                if not os.path.exists('data/'+n+"/"+category+"/"+date):
+                                                    os.makedirs('data/'+n+"/"+category+"/"+date)
+                                                path = 'data/'+n+"/"+category+"/"+date+"/"+ID+".txt" # set path to file 
+                                                self.generate_json(n, category, date, None, ID) # generate .json
+                                            except:
+                                                pass
                                     if "eldiario.es" in a:
                                         category = a_path[0]
                                         ID = a_path[1]
@@ -782,9 +844,13 @@ class Propagare(object):
                                             os.makedirs('data/'+n+"/"+category+"/"+date+"/"+tag)
                                         if not os.path.exists('data/'+n+"/"+category+"/"+date+"/"+tag+"/"+ID): # create new record
                                             os.makedirs('data/'+n+"/"+category+"/"+date+"/"+tag+"/"+ID)  
-                                        path = 'data/'+n+"/"+category+"/"+date+"/"+tag+"/"+ID+"/"+ID+".txt" # set path to file                  
+                                        path = 'data/'+n+"/"+category+"/"+date+"/"+tag+"/"+ID+"/"+ID+".txt" # set path to file 
                                         self.generate_json(n, category, date, tag, ID) # generate .json
-                                    fs = open(path, "w") # generate .txt
+                                    try:
+                                        fs = open(path, "w") # generate .txt
+                                    except:
+                                        print "\n[Error] No se pueden extraer las noticias de manera correcta. Saliendo...\n"
+                                        return
                                     fs.write("Fuente: " + str(a).encode('utf-8') + "\n") # write source url
                                     json_data.update({"Fuente": str(a)})
                                     for t in art_url_time_found:
@@ -793,25 +859,35 @@ class Propagare(object):
                                     for author in art_url_author_found:
                                         if "\t" in author:
                                             author = author.split('\t', 1)[1] # re-parse for \t
+                                        author = str(author.decode('ISO-8859-1').strip())
                                         fs.write("Autor(a): " + str(author).encode('utf-8') + "\n") # write author
                                         json_data.update({"Autor(a)": str(author)})
                                     for title in art_url_title_found:
-                                        title = self.format_content(title) # funct to parse and format html (+glitches) content
-                                        fs.write("Titular: " + str(title).encode('utf-8') + "\n") # write title
-                                        json_data.update({"Titular": str(title)})
+                                        title = str(title.decode('ISO-8859-1').strip())
+                                        parsed = self.format_content(str(title)) 
+                                        fs.write("Titular: " + str(parsed).encode('utf-8') + "\n") # write title
+                                        json_data.update({"Titular": str(parsed)})
                                     for description in art_url_description_found:
-                                        description_parsed = self.format_content(description) 
-                                        fs.write("Entrada: " + str(description_parsed).encode('utf-8') + "\n") # write description
-                                        json_data.update({"Entrada": str(description_parsed)})
+                                        description = str(description.decode('ISO-8859-1').strip())
+                                        parsed = self.format_content(str(description))
+                                        fs.write("Entrada: " + str(parsed).encode('utf-8') + "\n") # write description
+                                        json_data.update({"Entrada": str(parsed)})
                                     body_complete = ""
                                     for body in art_url_body_found:
+                                        body = str(body.decode('ISO-8859-1').strip())
+                                        if "elmundo.es" in a:
+                                            body = body.split("TE PUEDE INTERESAR",1)[0]
+                                            if "###" in body:
+                                                body = body.relace("###","")
                                         if "elpais.com" in a: 
                                             body = body.replace("<span>Explora nuestras historias</span> por temas","")
                                             body = body.replace("Recibe nuestra newsletter", "")
                                         body_complete += body + "\n\n"
-                                    body_parsed = self.format_content(body_complete) 
-                                    fs.write("\n" + str(body_parsed).encode('utf-8')) # write (plain text) body without keyword
-                                    json_data.update({"Noticia": str(body_parsed)})
+                                        if "elmundo.es" in a:
+                                            break
+                                    parsed = self.format_content(body_complete) 
+                                    fs.write("\n" + str(parsed).encode('utf-8')) # write (plain text) body without keyword
+                                    json_data.update({"Noticia": str(parsed)})
                                     self.json_report.write(json.dumps(json_data, sort_keys=True, indent=2, separators=(',', ':'), ensure_ascii=False)) # json dump
                                     fs.close() # close .txt
                                     self.json_report.close() # close .json
@@ -819,28 +895,31 @@ class Propagare(object):
                     num = 0 # flush art found counter
                     art_url_list = [] # flush art list
                 all_art_stored = self.count_all_stored()
-                if not self.total_num:
+                if self.total_num:
+                    print "" # zen out
+                else:
                     self.total_num = 0
-                print "\n[Info] Nuevos artículos descargados: " + str(self.total_num) + " | Total artículos almacenados (de todas las fuentes): " + str(all_art_stored) + "\n"  
-                if not self.options.forceno:
-                    print "-"*25
-                    stats_reply = raw_input("¿Quieres ver las estadísticas comparadas (S/n)?\n")
-                else:
-                    stats_reply = "N"
-                if stats_reply == "s" or stats_reply == "S":
-                    self.stats()
-                else:
-                    print "\n[Info] Saliendo...\n"
-                    return
-                if not self.options.forceno:
-                    print "-"*25
-                    search_reply = raw_input("¿Quieres buscar información semántica (S/n)?\n")
-                else:
-                    search_reply = "N"
-                if search_reply == "s" or search_reply == "S":
-                    self.search()
-                else:
-                    print "\n[Info] Saliendo...\n"
+                print "\n[Info] Nuevos artículos descargados: " + str(self.total_num) + " | Total artículos almacenados (de todas las fuentes): " + str(all_art_stored) + "\n"
+                if all_art_stored > 0:  
+                    if not self.options.forceno:
+                        print "-"*25
+                        stats_reply = raw_input("¿Quieres ver las estadísticas comparadas (S/n)?\n")
+                    else:
+                        stats_reply = "N"
+                    if stats_reply == "s" or stats_reply == "S":
+                        self.stats()
+                    else:
+                        print "\n[Info] Saliendo...\n"
+                        return
+                    if not self.options.forceno:
+                        print "-"*25
+                        search_reply = raw_input("¿Quieres buscar información semántica (S/n)?\n")
+                    else:
+                        search_reply = "N"
+                    if search_reply == "s" or search_reply == "S":
+                        self.search()
+                    else:
+                        print "\n[Info] Saliendo...\n"
             except (KeyboardInterrupt, SystemExit):
                 sys.exit()
 
